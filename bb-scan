@@ -1,0 +1,62 @@
+#!/usr/local/bin/python
+import os, sys, getpass, collections, stashy
+from subprocess import Popen, PIPE
+
+def main(url):
+    user = raw_input("Enter your Bitbucket username: ")
+    password = getpass.getpass(prompt="Enter your Bitbucket password: ")
+
+    print "Connecting to Bitbucket server"
+    try:
+        stash = stashy.connect(url, user, password)
+    except GenericException as e: # Raised on authentication failure
+        print "Authentication failure!"
+
+    project_list = stash.projects.list()
+
+    for project in project_list:
+        project_name =  project["name"]
+        project_key = project["key"]
+        print "%s --------------------------------------" % project_name
+
+        repo_list = stash.projects[project_key].repos.list()
+
+        for repo in repo_list:
+            print "|" # First part of the tree
+            scm_url=""
+            repo_slug= repo["slug"] # use the slug because it should be safer for file operations
+            output_dir = "%s/%s" % (project_key, repo_slug)
+            if os.path.exists("/home/el/myfile.txt"):
+                update(output_dir)
+            else: 
+                clone(repo, output_dir)
+        #rof
+
+        print "" # pad the next project section
+    #rof
+    print "Done"
+
+def clone(repo, to):
+    for link in repo["links"]["clone"]:
+        if link["name"] == "http":
+            scm_url = link["href"]
+            break
+        #fi
+    #rof
+    return subcall(["git", "clone", "--recursive", scm_url, to])
+
+def subcall(args):
+    p = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    output, err = p.communicate(b"input data that is passed to subprocess' stdin")
+    rc = p.returncode
+    return (rc, output, err)
+
+def help():
+    print "BB-Scan Utility"
+    print "Usage: bb-scan <bitbucket_url>"
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv[1])
+    except IndexError: # Raised when a url wasn't provided
+        help()
