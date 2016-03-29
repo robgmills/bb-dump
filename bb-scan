@@ -1,5 +1,5 @@
 #!/usr/local/bin/python
-import os, sys, getpass, collections, stashy
+import os, sys, git, getpass, collections, stashy
 from subprocess import Popen, PIPE
 
 def main(url):
@@ -22,11 +22,10 @@ def main(url):
         repo_list = stash.projects[project_key].repos.list()
 
         for repo in repo_list:
-            print "|" # First part of the tree
             scm_url=""
             repo_slug= repo["slug"] # use the slug because it should be safer for file operations
-            output_dir = "%s/%s" % (project_key, repo_slug)
-            if os.path.exists("/home/el/myfile.txt"):
+            output_dir = "dump/%s/%s" % (project_key, repo_slug)
+            if os.path.exists(output_dir):
                 update(output_dir)
             else: 
                 clone(repo, output_dir)
@@ -36,7 +35,17 @@ def main(url):
     #rof
     print "Done"
 
+def update(git_dir):
+    print "Updating %s" % git_dir
+    g = git.cmd.Git(git_dir)
+    try:
+        g.pull()
+    except: 
+        print "[ERROR] Could not pull latest for %s" % git_dir
+        
+
 def clone(repo, to):
+    print "Cloning %s to %s" % (repo["name"], to)
     for link in repo["links"]["clone"]:
         if link["name"] == "http":
             scm_url = link["href"]
