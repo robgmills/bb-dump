@@ -3,6 +3,7 @@ import os, sys, git, getpass, collections, stashy
 from subprocess import Popen, PIPE
 
 def main(url):
+    # TODO: Add validation here
     user = raw_input("Enter your Bitbucket username: ")
     password = getpass.getpass(prompt="Enter your Bitbucket password: ")
 
@@ -22,12 +23,67 @@ def main(url):
         repo_list = stash.projects[project_key].repos.list()
 
         for repo in repo_list:
-            backup(repo)
+            repo_slug = repo["slug"]
+            # TODO: Make the actions configurable
+            report(stash, project_key, repo_slug)
+            #backup(repo)
         #rof
 
         print "" # pad the next project section
     #rof
     print "Done"
+
+def report(stash, project, repo):
+    # Stats we're interested in
+    # Person with most comments (server-wide)
+    # Person with the most commits (server-wide)
+    # Anyone with no PR comments (server-wide)
+    # PR min/max/average time to merge/comments
+    print "Generating report for %s/%s" % (project, repo)
+
+    # Get the number of branches for the repo
+    #repo_branches_len = len(stash.projects[project].repos[repo].branches.list())
+    #print "Branches: %d" % repo_branches_len
+
+    #Get the number of changes for the repo
+    #repo_changes_len = len(stash.projects[project].repos[repo].changes.list())
+    #print "Changes: %d" % repo_changes_len
+
+    # Get the number of PRs for the repo
+    repo_prs_open = stash.projects[project].repos[repo].pull_requests.list()
+    repo_prs_open_len = len(repo_prs_open)
+    print "Total Open PRs: %d" % repo_prs_open_len
+
+    for pr in repo_prs_open:
+        print "PR ID: %s" % pr["id"]
+        properties = pr["properties"]
+        totalActivity = 0
+
+        try:
+            totalActivity += properties["openTaskCount"]
+            totalActivity += properties["resolvedTaskCount"]
+            totalActivity += properties["commentCount"]
+        except KeyError:
+            "no-op"
+
+        print "Total PR Activity: %d" % totalActivity
+        #pr_id = str(pr["id"])
+        #repo_pr_commits = stash.projects[project].repos[repo].pull_requests[pr_id].commits()
+        #print repo_pr_commits
+        #repo_pr_commits_len = len(repo_pr_commits)
+        #print "Total commits: %d" % repo_pr_commits_len
+        #print repo_pr_commits[0]
+        #repo_pr_comments = stash.projects[project].repos[repo].pull_requests[pr_id].comments.list()
+        #repo_pr_comments_len = len(repo_pr_comments)
+        #print "Total comments: %d" % repo_pr_comments_len
+        #print repo_pr_comments[0]
+    #rof
+
+def getAmbiguousProperty(dictionary, key):
+    try:
+        return dictionary[key]
+    except KeyError:
+        return None
 
 def backup(repo):
     scm_url=""
@@ -43,9 +99,8 @@ def update(git_dir):
     g = git.cmd.Git(git_dir)
     try:
         g.pull()
-    except: 
+    except:
         print "[ERROR] Could not pull latest for %s" % git_dir
-        
 
 def clone(repo, to):
     print "Cloning %s to %s" % (repo["name"], to)
