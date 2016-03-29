@@ -22,18 +22,21 @@ def main(url):
         repo_list = stash.projects[project_key].repos.list()
 
         for repo in repo_list:
-            scm_url=""
-            repo_slug= repo["slug"] # use the slug because it should be safer for file operations
-            output_dir = "dump/%s/%s" % (project_key, repo_slug)
-            if os.path.exists(output_dir):
-                update(output_dir)
-            else: 
-                clone(repo, output_dir)
+            backup(repo)
         #rof
 
         print "" # pad the next project section
     #rof
     print "Done"
+
+def backup(repo):
+    scm_url=""
+    repo_slug= repo["slug"] # use the slug because it should be safer for file operations
+    output_dir = "dump/%s/%s" % (project_key, repo_slug)
+    if os.path.exists(output_dir):
+        update(output_dir)
+    else:
+        clone(repo, output_dir)
 
 def update(git_dir):
     print "Updating %s" % git_dir
