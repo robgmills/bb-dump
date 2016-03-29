@@ -1,0 +1,22 @@
+dump
+
+# OS X
+.DS_Store
+
+# Log files
+*.out
+*.log
+
+# IDE files
+## IntelliJ
+*.iml
+.idea/
+## Eclipse
+.settings/
+.classpath
+.project
+
+# Archive files
+*.tar
+*.tgz
+*.gz

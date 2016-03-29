@@ -1,0 +1,99 @@
+#!/usr/local/bin/python
+import os, sys, git, getpass, collections, stashy, argparse, re
+from subprocess import Popen, PIPE
+
+def main(args):
+    creds = prompt(args.user)
+    stash = connect(args.url, creds)
+
+    for project in stash.projects.list():
+        project_name =  project["name"]
+        project_key = project["key"]
+        print "%s --------------------------------------" % project_name
+
+        repo_list = stash.projects[project_key].repos.list()
+
+        for repo in repo_list:
+            backup(repo, project_key, args.output)
+        #rof
+
+        print "" # pad the next project section
+    #rof
+    print "Done"
+
+# Prompt the user for required arguments if they weren't provided as command options
+def prompt(user):
+    if not user:
+        user = raw_input("Enter your Bitbucket username: ")
+    #fi
+    password = getpass.getpass(prompt="Enter your Bitbucket password: ")
+    credentials = collections.namedtuple('Credentials', ['user', 'password'])
+    return credentials(user, password)
+
+# Connect to the Bitbucket instance
+def connect(url, creds):
+    stash = stashy.connect(url, creds.user, creds.password)
+    try:
+        stash.projects.list() # shitty check to see if we were properly authenticated
+    except stashy.errors.GenericException, e:
+        print "Error authenticating"
+        sys.exit(1)
+    return stash
+
+def backup(repo, project_key, output):
+    scm_url=""
+    repo_slug= repo["slug"] # use the slug because it should be safer for file operations
+    output_dir = "%s/%s/%s" % (output, project_key, repo_slug)
+
+    # Get the repo scm url to check against our list of excludes
+    for link in repo["links"]["clone"]:
+        if link["name"] == "http":
+            scm_url = link["href"]
+            break
+    #rof
+
+    # Filter out repositories we want to exclude
+    for regex in args.exclude:
+        if re.findall(regex, scm_url):
+            print "Excluding %s because it matches pattern %s" %(repo['name'], regex)
+            return
+    #rof
+
+    if os.path.exists(output_dir):
+        pull(output_dir)
+    else:
+        clone(repo['name'], scm_url, output_dir)
+
+def pull(git_dir):
+    print "Updating %s" % git_dir
+    g = git.cmd.Git(git_dir)
+    try:
+        g.pull()
+    except:
+        print "[ERROR] Could not pull latest for %s" % git_dir
+
+def clone(name, scm_url, to):
+    print "Cloning %s to %s" % (name, to)
+    return subcall(["git", "clone", "--recursive", scm_url, to])
+
+def subcall(args):
+    p = Popen(args, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    output, err = p.communicate(b"input data that is passed to subprocess' stdin")
+    rc = p.returncode
+    return (rc, output, err)
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Scan and download an Atlassian Bitbucket instance')
+    parser.add_argument('url', metavar='url',
+                        help='The base URL for the Bitbucket instance.')
+    parser.add_argument('--exclude', action='append',
+                        help='Regex pattern with which to filter repositories with matching urls')
+    parser.add_argument('-u', '--user',
+                        help='User name with which to authenticate')
+    parser.add_argument('-o', '--output', metavar='DIR', default='output',
+                        help='The directory in which to clone all of the repositories (default: ./output)')
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    main(args)
