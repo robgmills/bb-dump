@@ -60,9 +60,17 @@ def backup(repo, project_key, output):
     #rof
 
     if os.path.exists(output_dir):
+        master(output_dir)
         pull(output_dir)
     else:
         clone(repo['name'], scm_url, output_dir)
+
+def master(git_dir):
+    try:
+        master = git.Repo(git_dir).heads.master
+        master.checkout()
+    except:
+        print "[ERROR] Could not change to master in %s" % git_dir
 
 def pull(git_dir):
     print "Updating %s" % git_dir
