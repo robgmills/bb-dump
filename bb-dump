@@ -77,7 +77,7 @@ def checkout(git_dir, branch_name):
         branch = git.Repo(git_dir).heads[branch_name]
         branch.checkout()
     except:
-        print "[ERROR] Could not change to %s in %s" % (branch_name, git_dir)
+        #print "[ERROR] Could not change to %s in %s" % (branch_name, git_dir)
         raise
 
 def master(git_dir):
