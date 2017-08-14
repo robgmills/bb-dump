@@ -16,7 +16,7 @@ pip install gitpython
 
 ## Usage
 ```sh
-./bb-scan -h
+./bb-dump -h
 ```
 
 ## Roadmap
